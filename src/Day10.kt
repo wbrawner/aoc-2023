@@ -25,38 +25,60 @@ fun main() {
         }
         val start = pathSegments.first { it.pipe == 'S' }
         val loop = pathSegments.findLoop(start)
+        input.forEachIndexed { y, row ->
+            row.forEachIndexed { x, char ->
+                val color = if (loop.any { it.point == Point(x,y)}) {
+                    Color.WHITE
+                } else {
+                    Color.GREY
+                }
+                char.print(color)
+            }
+            println()
+        }
         var innerArea = 0
         input.forEachIndexed { y, row ->
             var loopOpen = false
             val loopPiecesInRow = loop.filter { it.point.y == y }.sortedBy { it.point.x }
             if (loopPiecesInRow.isEmpty()) return@forEachIndexed
-            var pipesSeen = 0
-            row.forEachIndexed { x, char ->
-                print(char.toBlockChar(loopOpen))
+            var x = 0
+            while (x < row.length) {
                 val loopPiece = loopPiecesInRow.firstOrNull { it.point == Point(x, y) }
                 if (loopPiece == null) {
                     if (loopOpen) {
+                        row[x].print(Color.GREEN)
                         innerArea++
-//                        println("Inner area at $x, $y")
+                    } else {
+                        row[x].print(Color.RED)
                     }
                 } else {
+                    row[x].print(Color.WHITE)
+                    var current = loopPiecesInRow.firstOrNull { loopPiece.validMoves().contains(it.point) && it.point == Point(x + 1, y) }
+                    while (current != null) {
+                        x++
+                        row[x].print(Color.WHITE)
+                        current = loopPiecesInRow.firstOrNull { current!!.validMoves().contains(it.point) && it.point == Point(x + 1, y) }
+                    }
+                    val lastLoopPiece = loopPiecesInRow.first { it.point == Point(x, y) }
                     loopOpen = when (loopPiece.pipe) {
-                        'S', 'L', 'F', '-' -> true
-                        '7', 'J' -> false
-                        '|' -> when (++pipesSeen % 2) {
-                            1 -> true
-                            0 -> false
-                            else -> throw IllegalStateException("Not possible")
+                        'L' -> when (lastLoopPiece.pipe) {
+                            '7' -> !loopOpen
+                            'J' -> loopOpen
+                            else -> throw IllegalArgumentException("Invalid loop sequence ${loopPiece.pipe} to ${lastLoopPiece.pipe}")
                         }
-                        else -> throw IllegalStateException("Unhandled pipe char: ${loopPiece.pipe}")
+                        'F' -> when (lastLoopPiece.pipe) {
+                            '7' -> loopOpen
+                            'J' -> !loopOpen
+                            else -> throw IllegalArgumentException("Invalid loop sequence ${loopPiece.pipe} to ${lastLoopPiece.pipe}")
+                        }
+                        else -> !loopOpen
                     }
                 }
+                x++
             }
             println()
         }
-        return innerArea.also {
-            it.println()
-        }
+        return innerArea
     }
 
 // test if implementation meets criteria from the description, like:
@@ -64,7 +86,7 @@ fun main() {
 //    check(part1(testInput) == 4)
 
     val input = readInput("Day10")
-//    part1(input).println()
+    part1(input).println()
     check(part2(testInput) == 10)
     part2(input).println()
 }
@@ -153,14 +175,23 @@ fun Iterable<PathSegment>.findLoop(start: PathSegment): Iterable<PathSegment> {
     throw IllegalStateException("Failed to find loop")
 }
 
-fun Char.toBlockChar(loopOpen: Boolean = false) = when (this) {
+fun Char.toBlockChar() = when (this) {
     'S' -> '★'
-    'L' -> '╚'
-    'F' -> '╔'
-    '7' -> '╗'
-    'J' -> '╝'
-    '|' -> '║'
-    '-' -> '═'
-    '.' -> if (loopOpen) '•' else ' '
+    'L' -> '┗'
+    'F' -> '┏'
+    '7' -> '┓'
+    'J' -> '┛'
+    '|' -> '┃'
+    '-' -> '━'
+    '.' -> '•'
     else -> throw IllegalArgumentException("Unhandled char mapping: $this")
 }
+
+enum class Color(val escapeSequence: Int) {
+    RED(31),
+    GREEN(32),
+    GREY(90),
+    WHITE(97),
+}
+
+fun Char.print(color: Color) = print("\u001b[${color.escapeSequence}m${this.toBlockChar()}\u001b[0m")
