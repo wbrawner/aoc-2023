@@ -1,3 +1,6 @@
+import java.awt.Desktop
+import java.net.URI
+
 plugins {
     kotlin("jvm") version "1.9.21"
 }
@@ -22,8 +25,8 @@ tasks {
                 val (prevDayNum) = Regex("Day(\\d\\d)").find(it.name)!!.destructured
                 prevDayNum.toInt()
             }
-            val newDayNum = String.format("%02d", prevDayNum + 1)
-            File("$projectDir/src", "Day$newDayNum.kt").writeText(
+            val newDayNum = (prevDayNum + 1).toString()
+            File("$projectDir/src", "Day${newDayNum.padStart(2, '0')}.kt").writeText(
                 """fun main() {
     fun part1(input: List<String>): Int {
         return input.size
@@ -34,15 +37,18 @@ tasks {
     }
 
     // test if implementation meets criteria from the description, like:
-    val testInput = readInput("Day${newDayNum}_test")
+    val testInput = readInput("Day${newDayNum.padStart(2, '0')}_test")
     check(part1(testInput) == 0)
 
-    val input = readInput("Day${newDayNum}")
+    val input = readInput("Day${newDayNum.padStart(2, '0')}")
     part1(input).println()
+    check(part2(testInput) == 0)
     part2(input).println()
 }
 """
             )
+            val challengeUrl = "https://adventofcode.com/2023/day/$newDayNum"
+            Desktop.getDesktop().browse(URI.create(challengeUrl))
             File("$projectDir/src", "Day$newDayNum.txt").createNewFile()
             File("$projectDir/src", "Day${newDayNum}_test.txt").createNewFile()
         }
